@@ -2,7 +2,6 @@ const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
 const path = require("path");
 const cheerio = require("cheerio");
-const ExcelJS = require("exceljs");
 
 const url = "https://www.nseindia.com/get-quotes/equity?symbol=TATAMOTORS";
 
@@ -50,28 +49,6 @@ async function saveDataToJsonFile(paths, data) {
       shouldRestart = await runScript();
     }
   })();
-}
-
-async function saveDataToExcel(paths, data) {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Data");
-
-  // Add headers
-  const headers = Object.keys(data);
-  worksheet.addRow(headers);
-
-  // Add data rows
-  const values = Object.values(data);
-  worksheet.addRow(values);
-
-  const excelFilePath = path.join(paths, "extracted_data.xlsx");
-
-  try {
-    await workbook.xlsx.writeFile(excelFilePath);
-    console.log("Data saved to Excel");
-  } catch (error) {
-    console.error("Error saving data to Excel:", error);
-  }
 }
 
 // async function saveDataToJsonFile(paths, data) {
@@ -212,7 +189,6 @@ async function runScript() {
     // await fs.writeFile(htmlFilePath, htmlContent);
     let data = extractUsefulData(htmlContent);
     saveDataToJsonFile(companyName, { companyName, ...data });
-    saveDataToExcel(companyName, { companyName, ...data });
     const screenshotFilePath = path.join(companyName, "screenshot_final.png");
     await page.screenshot({ path: screenshotFilePath, fullPage: true });
     return false;
