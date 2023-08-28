@@ -2,8 +2,9 @@ const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
 const path = require("path");
 const cheerio = require("cheerio");
+let ExcelJS = require("exceljs");
 
-const url = "https://www.nseindia.com/get-quotes/equity?symbol=TATAMOTORS";
+const url = "https://www.nseindia.com/get-quotes/equity?symbol=TCS";
 
 async function createFolderIfNotExists(folderName) {
   try {
@@ -12,6 +13,72 @@ async function createFolderIfNotExists(folderName) {
     if (error.code !== "EEXIST") {
       throw error;
     }
+  }
+}
+async function saveDataToExcel(paths, data) {
+  const excelFileName = paths + "/extracted_data.xlsx";
+
+  let workbook;
+  try {
+    await fs.access(excelFileName);
+    workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(excelFileName);
+  } catch (error) {
+    workbook = new ExcelJS.Workbook();
+  }
+
+  const worksheet =
+    workbook.getWorksheet(1) || workbook.addWorksheet("Sheet 1");
+
+  if (!worksheet.getRow(1).getCell(1).value) {
+    worksheet.addRow(["Order Book Data", data.timestamp]);
+    worksheet.addRow([]);
+    worksheet.addRow(["Ask Side", "", "", "", "Bid Side", "", "", ""]);
+  }
+
+  data.orderBook.forEach((element, i) => {
+    worksheet.addRow([
+      `Price L${i + 1}`,
+      element.ask,
+      `Q${i + 1}`,
+      element.sellquantity,
+      `Price L${i + 1}`,
+      element.bid,
+      `Q${i + 1}`,
+      element.buyquantity,
+    ]);
+  });
+
+  worksheet.addRow([]);
+  worksheet.addRow(["Trade Book", "", "", "", "", "", "", "", ""]);
+  worksheet.addRow([
+    "Open",
+    "Low",
+    "High",
+    "Close",
+    "Adjusted Price",
+    "Traded Volume",
+    "Traded Value",
+    "Impact Cost",
+  ]);
+
+  worksheet.addRow([
+    data.open,
+    data.low,
+    data.high,
+    data.close,
+    data.adjusted_price,
+    data.Tradevolume,
+    data.Tradevalue,
+    data.Impactcost,
+  ]);
+  worksheet.addRow([""]);
+
+  try {
+    await workbook.xlsx.writeFile(excelFileName);
+    console.log(`${excelFileName} saved.`);
+  } catch (err) {
+    console.error("Error updating Excel file:", err);
   }
 }
 
@@ -129,7 +196,7 @@ function extractUsefulData(text) {
       buy: $("#orderBuyTq").text(),
       sell: $("#orderSellTq").text(),
     },
-    timestamp: Date.now(),
+    timestamp: `${Date.now()}`,
   };
   return extractedData;
 }
@@ -189,6 +256,7 @@ async function runScript() {
     // await fs.writeFile(htmlFilePath, htmlContent);
     let data = extractUsefulData(htmlContent);
     saveDataToJsonFile(companyName, { companyName, ...data });
+    saveDataToExcel(companyName, { companyName, ...data });
     const screenshotFilePath = path.join(companyName, "screenshot_final.png");
     await page.screenshot({ path: screenshotFilePath, fullPage: true });
     return false;
