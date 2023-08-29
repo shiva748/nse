@@ -4,7 +4,9 @@ const path = require("path");
 const cheerio = require("cheerio");
 let ExcelJS = require("exceljs");
 
-const url = "https://www.nseindia.com/get-quotes/equity?symbol=TCS";
+let urls = ["TCS", "TATACONSUM", "TATAMOTORS"];
+urls.forEach((Element)=>{
+  const url = `https://www.nseindia.com/get-quotes/equity?symbol=${Element}`;
 
 async function createFolderIfNotExists(folderName) {
   try {
@@ -218,8 +220,8 @@ async function runScript() {
     let contentFound = false;
     let iterationCount = 0;
 
-    while (!contentFound && iterationCount < 3) {
-      await page.screenshot({ path: "current_state.png", fullPage: true });
+    while (!contentFound && iterationCount < 2) {
+      // await page.screenshot({ path: "current_state.png", fullPage: true });
       const element = await page.$(dynamicDataSelector);
       if (element) {
         const content = await page.evaluate(
@@ -249,7 +251,7 @@ async function runScript() {
 
     const companyName = url.split("=")[1];
     await createFolderIfNotExists(companyName);
-    console.log("Final screenshot captured after dynamic data is loaded");
+    // console.log("Final screenshot captured after dynamic data is loaded");
     console.log("extracting data from the file");
     const htmlContent = await page.content();
     // const htmlFilePath = path.join(companyName, "page.html");
@@ -258,7 +260,7 @@ async function runScript() {
     saveDataToJsonFile(companyName, { companyName, ...data });
     saveDataToExcel(companyName, { companyName, ...data });
     const screenshotFilePath = path.join(companyName, "screenshot_final.png");
-    await page.screenshot({ path: screenshotFilePath, fullPage: true });
+    // await page.screenshot({ path: screenshotFilePath, fullPage: true });
     return false;
   } catch (error) {
     console.error("An error occurred:", error);
@@ -273,3 +275,4 @@ async function runScript() {
     shouldRestart = await runScript();
   }
 })();
+})
